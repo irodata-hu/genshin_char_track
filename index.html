@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Genshin Character Profile & Extractor</title>
+  <title>Genshin Character Image Gallery</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,16 +16,10 @@
       align-items: center;
     }
 
-    .container {
-      max-width: 900px;
-      width: 100%;
-    }
-
     .search-box {
       display: flex;
       gap: 10px;
-      margin-bottom: 1.5rem;
-      justify-content: center;
+      margin-bottom: 2rem;
     }
 
     input, button {
@@ -52,202 +46,106 @@
       background-color: #3b5bdb;
     }
 
-    .main-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    @media (max-width: 768px) {
-      .main-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .card {
-      background-color: #1e1e28;
-      border-radius: 10px;
-      padding: 1.5rem;
-      text-align: center;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-      display: none;
-    }
-
-    .card img {
-      width: 100%;
-      height: 320px;
-      object-fit: cover;
-      object-position: top;
-      border-radius: 8px;
+    #status {
       margin-bottom: 1rem;
-      background-color: #0d0d12;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 0.3rem 0.8rem;
-      border-radius: 20px;
-      background-color: #333345;
-      font-size: 0.85rem;
-      margin: 0.2rem;
-    }
-
-    .debug-panel {
-      background-color: #181822;
-      border-radius: 10px;
-      padding: 1rem;
-      border: 1px solid #333345;
-      font-family: monospace;
-      font-size: 0.85rem;
-      overflow: hidden;
-    }
-
-    .debug-title {
-      color: #ffd43b;
+      color: #ff6b6b;
       font-weight: bold;
-      margin-bottom: 0.5rem;
     }
 
-    .status-box {
-      padding: 0.5rem;
-      border-radius: 4px;
-      background: #282836;
-      margin-bottom: 1rem;
-      color: #74c0fc;
-      word-break: break-all;
+    .image-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 1200px;
     }
 
-    pre {
-      background-color: #0d0d12;
-      padding: 0.8rem;
-      border-radius: 6px;
-      max-height: 250px;
-      overflow-y: auto;
-      color: #a6e22e;
-      white-space: pre-wrap;
-      word-break: break-all;
+    .img-wrapper {
+      background-color: #1e1e28;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
-    .extraction-steps {
-      color: #b197fc;
-      margin-bottom: 1rem;
-      line-height: 1.4;
+    /* Fixed: object-fit contain prevents cropping */
+    .img-wrapper img {
+      max-width: 100%;
+      max-height: 75vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      display: block;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1 style="text-align: center; margin-bottom: 1rem;">Genshin Character Extractor (GitHub Pages Ready)</h1>
-
-    <div class="search-box">
-      <input type="text" id="characterInput" placeholder="e.g. furina, raiden, hutao" value="furina">
-      <button id="searchBtn">Search</button>
-    </div>
-
-    <div class="main-layout">
-      <!-- Profile UI Card -->
-      <div class="card" id="profileCard">
-        <img id="charImage" src="" alt="Character Image">
-        <h2 id="charName" style="margin: 0.5rem 0;"></h2>
-        <div>
-          <span class="badge" id="charRarity"></span>
-          <span class="badge" id="charElement"></span>
-          <span class="badge" id="charWeapon"></span>
-        </div>
-      </div>
-
-      <!-- Debug & Extraction Logic Panel -->
-      <div class="debug-panel">
-        <div class="debug-title">🔍 API Request Status</div>
-        <div class="status-box" id="statusBox">Ready to fetch data.</div>
-
-        <div class="debug-title">⚙️ Data Extraction Logic</div>
-        <div class="extraction-steps" id="extractionSteps">Waiting for query...</div>
-
-        <div class="debug-title">📦 Raw JSON Response</div>
-        <pre id="jsonOutput">// Raw JSON response will appear here</pre>
-      </div>
-    </div>
+  <div class="search-box">
+    <input type="text" id="characterInput" placeholder="Enter name (e.g. furina, raiden)" value="furina">
+    <button id="searchBtn">Search</button>
   </div>
 
-  <script>
-    const statusBox = document.getElementById('statusBox');
-    const searchBtn = document.getElementById('searchBtn');
-    const extractionSteps = document.getElementById('extractionSteps');
-    const jsonOutput = document.getElementById('jsonOutput');
-    const card = document.getElementById('profileCard');
-    const charImage = document.getElementById('charImage');
+  <div id="status"></div>
 
-    async function searchCharacter() {
+  <div class="image-grid" id="imageGrid"></div>
+
+  <script>
+    const searchBtn = document.getElementById('searchBtn');
+    const imageGrid = document.getElementById('imageGrid');
+    const statusDiv = document.getElementById('status');
+
+    async function fetchImages() {
       const rawInput = document.getElementById('characterInput').value.trim() || 'furina';
       const charId = rawInput.toLowerCase().replace(/\s+/g, '-');
-      const apiUrl = `https://genshin.jmp.blue/characters/${charId}`;
+      
+      statusDiv.innerText = '';
+      imageGrid.innerHTML = '';
 
-      statusBox.style.color = '#74c0fc';
-      statusBox.innerText = `Fetching GET ${apiUrl}...`;
+      // Image endpoints available for Genshin Impact characters
+      const imageEndpoints = [
+        `https://genshin.jmp.blue/characters/${charId}/gacha-splash`,
+        `https://genshin.jmp.blue/characters/${charId}/gacha-card`,
+        `https://genshin.jmp.blue/characters/${charId}/card`,
+        `https://genshin.jmp.blue/characters/${charId}/portrait`,
+        `https://genshin.jmp.blue/characters/${charId}/icon`
+      ];
 
-      try {
-        const response = await fetch(apiUrl);
+      let loadedCount = 0;
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: Character "${charId}" not found.`);
-        }
+      imageEndpoints.forEach(url => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'img-wrapper';
 
-        const data = await response.json();
+        const img = document.createElement('img');
+        img.src = url;
 
-        // Target high-reliability image endpoints
-        const primaryImage = `https://genshin.jmp.blue/characters/${charId}/gacha-card`;
-        const fallbackImage = `https://genshin.jmp.blue/characters/${charId}/icon`;
-
-        // Handle Image Load Errors gracefully
-        charImage.onerror = function() {
-          if (this.src !== fallbackImage) {
-            console.warn("Primary image blocked or missing. Trying fallback icon...");
-            this.src = fallbackImage;
-          }
+        img.onload = () => {
+          wrapper.appendChild(img);
+          imageGrid.appendChild(wrapper);
+          loadedCount++;
         };
 
-        charImage.src = primaryImage;
-
-        // Print step-by-step extraction logic
-        extractionSteps.innerHTML = `
-          1. <b>API Endpoint:</b> GET ${apiUrl}<br>
-          2. <b>Name Field:</b> data.name ➔ "${data.name}"<br>
-          3. <b>Rarity Field:</b> data.rarity ➔ ${data.rarity}<br>
-          4. <b>Element & Weapon:</b> data.vision / data.weapon ➔ ${data.vision} / ${data.weapon}<br>
-          5. <b>Primary Image URL:</b> ${primaryImage}<br>
-          6. <b>Fallback Icon URL:</b> ${fallbackImage}
-        `;
-
-        // Output Raw Data
-        jsonOutput.innerText = JSON.stringify(data, null, 2);
-
-        // Update UI Text
-        document.getElementById('charName').innerText = data.name;
-        document.getElementById('charRarity').innerText = '★'.repeat(parseInt(data.rarity) || 5);
-        document.getElementById('charElement').innerText = data.vision || data.element || 'N/A';
-        document.getElementById('charWeapon').innerText = data.weapon || 'N/A';
-
-        card.style.display = 'block';
-        statusBox.style.color = '#51cf66';
-        statusBox.innerText = `✅ Loaded ${data.name} on GitHub Pages!`;
-
-      } catch (err) {
-        statusBox.style.color = '#ff6b6b';
-        statusBox.innerText = `❌ ${err.message}`;
-        extractionSteps.innerText = 'Extraction failed.';
-        jsonOutput.innerText = `{\n  "error": "${err.message}"\n}`;
-        card.style.display = 'none';
-      }
+        // Silently skip endpoints that do not exist for the specified character
+        img.onerror = () => {
+          if (imageGrid.children.length === 0 && loadedCount === 0) {
+            statusDiv.innerText = `No images found for "${charId}". Check spelling.`;
+          }
+        };
+      });
     }
 
-    searchBtn.addEventListener('click', searchCharacter);
+    searchBtn.addEventListener('click', fetchImages);
     document.getElementById('characterInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') searchCharacter();
+      if (e.key === 'Enter') fetchImages();
     });
 
-    window.addEventListener('DOMContentLoaded', searchCharacter);
+    window.addEventListener('DOMContentLoaded', fetchImages);
   </script>
 </body>
 </html>
