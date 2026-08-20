@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Genshin Character Profile & Extraction Debugger</title>
+  <title>Genshin Character Profile & Extractor</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -138,10 +138,10 @@
 <body>
 
   <div class="container">
-    <h1 style="text-align: center; margin-bottom: 1rem;">Genshin Profile & Data Extractor</h1>
+    <h1 style="text-align: center; margin-bottom: 1rem;">Genshin Character Extractor (GitHub Pages Ready)</h1>
 
     <div class="search-box">
-      <input type="text" id="characterInput" placeholder="Enter character name" value="Furina">
+      <input type="text" id="characterInput" placeholder="e.g. furina, raiden, hutao" value="furina">
       <button id="searchBtn">Search</button>
     </div>
 
@@ -159,98 +159,95 @@
 
       <!-- Debug & Extraction Logic Panel -->
       <div class="debug-panel">
-        <div class="debug-title">🔍 Module Status</div>
-        <div class="status-box" id="statusBox">Initializing module...</div>
+        <div class="debug-title">🔍 API Request Status</div>
+        <div class="status-box" id="statusBox">Ready to fetch data.</div>
 
         <div class="debug-title">⚙️ Data Extraction Logic</div>
         <div class="extraction-steps" id="extractionSteps">Waiting for query...</div>
 
-        <div class="debug-title">📦 Raw Object Output</div>
-        <pre id="jsonOutput">// Raw JSON will appear here</pre>
+        <div class="debug-title">📦 Raw JSON Response</div>
+        <pre id="jsonOutput">// Raw JSON response will appear here</pre>
       </div>
     </div>
   </div>
 
-  <script type="module">
-    // Direct ES Module import eliminates CDN object loading issues
-    import genshinDb from 'https://cdn.jsdelivr.net/npm/genshin-db@latest/+esm';
-
+  <script>
     const statusBox = document.getElementById('statusBox');
     const searchBtn = document.getElementById('searchBtn');
     const extractionSteps = document.getElementById('extractionSteps');
     const jsonOutput = document.getElementById('jsonOutput');
     const card = document.getElementById('profileCard');
+    const charImage = document.getElementById('charImage');
 
-    // Confirm module load
-    statusBox.style.color = '#51cf66';
-    statusBox.innerText = '✅ genshin-db ES Module loaded successfully!';
+    async function searchCharacter() {
+      const rawInput = document.getElementById('characterInput').value.trim() || 'furina';
+      const charId = rawInput.toLowerCase().replace(/\s+/g, '-');
+      const apiUrl = `https://genshin.jmp.blue/characters/${charId}`;
 
-    // Set search parameters
-    genshinDb.setDefaultOptions({ language: 'English', resultLanguage: 'English' });
-
-    function searchCharacter() {
-      const input = document.getElementById('characterInput').value.trim() || 'Furina';
       statusBox.style.color = '#74c0fc';
-      statusBox.innerText = `Searching for "${input}"...`;
+      statusBox.innerText = `Fetching GET ${apiUrl}...`;
 
       try {
-        // Step 1: Query the local database object
-        const result = genshinDb.characters(input);
+        const response = await fetch(apiUrl);
 
-        if (!result) {
-          statusBox.style.color = '#ff6b6b';
-          statusBox.innerText = `❌ Character "${input}" not found in database.`;
-          extractionSteps.innerText = 'Query returned null.';
-          jsonOutput.innerText = '// No data';
-          card.style.display = 'none';
-          return;
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: Character "${charId}" not found.`);
         }
 
-        // Step 2: Extraction logic with fallbacks
-        const imgPath = result.images?.cover1 || result.images?.icon || result.images?.sideicon;
-        
-        // Log key extraction steps directly to screen
+        const data = await response.json();
+
+        // Target high-reliability image endpoints
+        const primaryImage = `https://genshin.jmp.blue/characters/${charId}/gacha-card`;
+        const fallbackImage = `https://genshin.jmp.blue/characters/${charId}/icon`;
+
+        // Handle Image Load Errors gracefully
+        charImage.onerror = function() {
+          if (this.src !== fallbackImage) {
+            console.warn("Primary image blocked or missing. Trying fallback icon...");
+            this.src = fallbackImage;
+          }
+        };
+
+        charImage.src = primaryImage;
+
+        // Print step-by-step extraction logic
         extractionSteps.innerHTML = `
-          1. <b>Query Call:</b> genshinDb.characters("${input}")<br>
-          2. <b>Name Field:</b> result.name ➔ "${result.name}"<br>
-          3. <b>Rarity Field:</b> result.rarity ➔ ${result.rarity}<br>
-          4. <b>Element & Weapon:</b> result.element / result.weaponType ➔ ${result.element} / ${result.weaponType}<br>
-          5. <b>Image Fallback Logic:</b><br>
-          &nbsp;&nbsp;• result.images.cover1 = ${result.images?.cover1 ? `"${result.images.cover1}"` : 'undefined'}<br>
-          &nbsp;&nbsp;• result.images.icon = ${result.images?.icon ? `"${result.images.icon}"` : 'undefined'}<br>
-          &nbsp;&nbsp;➔ <b>Selected URL:</b> "${imgPath}"
+          1. <b>API Endpoint:</b> GET ${apiUrl}<br>
+          2. <b>Name Field:</b> data.name ➔ "${data.name}"<br>
+          3. <b>Rarity Field:</b> data.rarity ➔ ${data.rarity}<br>
+          4. <b>Element & Weapon:</b> data.vision / data.weapon ➔ ${data.vision} / ${data.weapon}<br>
+          5. <b>Primary Image URL:</b> ${primaryImage}<br>
+          6. <b>Fallback Icon URL:</b> ${fallbackImage}
         `;
 
-        // Step 3: Render complete JSON object for inspection
-        jsonOutput.innerText = JSON.stringify(result, null, 2);
+        // Output Raw Data
+        jsonOutput.innerText = JSON.stringify(data, null, 2);
 
-        // Step 4: Map extracted values to UI components
-        document.getElementById('charName').innerText = result.name;
-        document.getElementById('charRarity').innerText = '★'.repeat(parseInt(result.rarity));
-        document.getElementById('charElement').innerText = result.element;
-        document.getElementById('charWeapon').innerText = result.weaponType;
-        document.getElementById('charImage').src = imgPath;
+        // Update UI Text
+        document.getElementById('charName').innerText = data.name;
+        document.getElementById('charRarity').innerText = '★'.repeat(parseInt(data.rarity) || 5);
+        document.getElementById('charElement').innerText = data.vision || data.element || 'N/A';
+        document.getElementById('charWeapon').innerText = data.weapon || 'N/A';
 
         card.style.display = 'block';
         statusBox.style.color = '#51cf66';
-        statusBox.innerText = `✅ Extracted data for ${result.name}`;
+        statusBox.innerText = `✅ Loaded ${data.name} on GitHub Pages!`;
 
       } catch (err) {
         statusBox.style.color = '#ff6b6b';
-        statusBox.innerText = `❌ Error: ${err.message}`;
-        jsonOutput.innerText = err.stack;
+        statusBox.innerText = `❌ ${err.message}`;
+        extractionSteps.innerText = 'Extraction failed.';
+        jsonOutput.innerText = `{\n  "error": "${err.message}"\n}`;
         card.style.display = 'none';
       }
     }
 
-    // Event listeners
     searchBtn.addEventListener('click', searchCharacter);
     document.getElementById('characterInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') searchCharacter();
     });
 
-    // Run initial search on load
-    searchCharacter();
+    window.addEventListener('DOMContentLoaded', searchCharacter);
   </script>
 </body>
 </html>
