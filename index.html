@@ -3,17 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Genshin Character Image Gallery</title>
+  <title>Genshin Character High-Res Gallery</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #121218;
-      color: #e0e0e0;
+      background-color: #0e0e12;
+      color: #ffffff;
       margin: 0;
       padding: 2rem;
       display: flex;
       flex-direction: column;
       align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
     }
 
     .search-box {
@@ -23,16 +25,18 @@
     }
 
     input, button {
-      padding: 0.8rem 1rem;
+      padding: 0.8rem 1.2rem;
       font-size: 1rem;
-      border-radius: 6px;
+      border-radius: 8px;
       border: none;
+      outline: none;
     }
 
     input {
-      width: 250px;
-      background-color: #2a2a36;
+      width: 280px;
+      background-color: #1e1e28;
       color: #fff;
+      border: 1px solid #333345;
     }
 
     button {
@@ -52,100 +56,113 @@
       font-weight: bold;
     }
 
-    .image-grid {
+    .gallery {
       display: flex;
       flex-wrap: wrap;
-      gap: 20px;
+      gap: 24px;
       justify-content: center;
-      align-items: flex-start;
+      align-items: center;
       width: 100%;
-      max-width: 1200px;
+      max-width: 1400px;
     }
 
-    .img-wrapper {
-      background-color: #1e1e28;
+    .img-card {
+      background-color: #161620;
+      border: 1px solid #2a2a3a;
       border-radius: 12px;
-      padding: 1rem;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      padding: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
       display: flex;
       justify-content: center;
       align-items: center;
     }
 
-    /* Fixed: object-fit contain prevents cropping */
-    .img-wrapper img {
+    /* Fixed Aspect Ratio & No Cropping */
+    .img-card img {
       max-width: 100%;
-      max-height: 75vh;
+      max-height: 85vh;
       width: auto;
       height: auto;
       object-fit: contain;
       border-radius: 8px;
       display: block;
+      image-rendering: -webkit-optimize-contrast;
     }
   </style>
 </head>
 <body>
 
   <div class="search-box">
-    <input type="text" id="characterInput" placeholder="Enter name (e.g. furina, raiden)" value="furina">
+    <input type="text" id="characterInput" placeholder="Enter character name (e.g. Furina, Raiden)" value="Furina">
     <button id="searchBtn">Search</button>
   </div>
 
   <div id="status"></div>
 
-  <div class="image-grid" id="imageGrid"></div>
+  <div class="gallery" id="gallery"></div>
 
-  <script>
+  <script type="module">
+    // ES Module load natively supported on GitHub Pages (https://)
+    import genshinDb from 'https://cdn.jsdelivr.net/npm/genshin-db@latest/+esm';
+
+    genshinDb.setDefaultOptions({ language: 'English', resultLanguage: 'English' });
+
     const searchBtn = document.getElementById('searchBtn');
-    const imageGrid = document.getElementById('imageGrid');
-    const statusDiv = document.getElementById('status');
+    const characterInput = document.getElementById('characterInput');
+    const gallery = document.getElementById('gallery');
+    const status = document.getElementById('status');
 
-    async function fetchImages() {
-      const rawInput = document.getElementById('characterInput').value.trim() || 'furina';
-      const charId = rawInput.toLowerCase().replace(/\s+/g, '-');
+    function loadFullResImages() {
+      const query = characterInput.value.trim() || 'Furina';
+      status.innerText = '';
+      gallery.innerHTML = '';
+
+      const character = genshinDb.characters(query);
+
+      if (!character) {
+        status.innerText = `Character "${query}" not found. Check spelling.`;
+        return;
+      }
+
+      const imageObj = character.images || {};
       
-      statusDiv.innerText = '';
-      imageGrid.innerHTML = '';
+      // Extract unique original high-res image URLs
+      const imageUrls = [
+        imageObj.cover1,
+        imageObj.cover2,
+        imageObj.icon,
+        imageObj.sideicon,
+        imageObj.hoyolab-avatar
+      ].filter((url, index, self) => url && typeof url === 'string' && self.indexOf(url) === index);
 
-      // Image endpoints available for Genshin Impact characters
-      const imageEndpoints = [
-        `https://genshin.jmp.blue/characters/${charId}/gacha-splash`,
-        `https://genshin.jmp.blue/characters/${charId}/gacha-card`,
-        `https://genshin.jmp.blue/characters/${charId}/card`,
-        `https://genshin.jmp.blue/characters/${charId}/portrait`,
-        `https://genshin.jmp.blue/characters/${charId}/icon`
-      ];
+      if (imageUrls.length === 0) {
+        status.innerText = 'No image links available for this character.';
+        return;
+      }
 
-      let loadedCount = 0;
-
-      imageEndpoints.forEach(url => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'img-wrapper';
+      imageUrls.forEach(url => {
+        const card = document.createElement('div');
+        card.className = 'img-card';
 
         const img = document.createElement('img');
+        // Crucial: Bypass CDN hotlink compression / 403 blocks on GitHub Pages
+        img.setAttribute('referrerpolicy', 'no-referrer');
         img.src = url;
+        img.alt = character.name;
 
         img.onload = () => {
-          wrapper.appendChild(img);
-          imageGrid.appendChild(wrapper);
-          loadedCount++;
-        };
-
-        // Silently skip endpoints that do not exist for the specified character
-        img.onerror = () => {
-          if (imageGrid.children.length === 0 && loadedCount === 0) {
-            statusDiv.innerText = `No images found for "${charId}". Check spelling.`;
-          }
+          card.appendChild(img);
+          gallery.appendChild(card);
         };
       });
     }
 
-    searchBtn.addEventListener('click', fetchImages);
-    document.getElementById('characterInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') fetchImages();
+    searchBtn.addEventListener('click', loadFullResImages);
+    characterInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loadFullResImages();
     });
 
-    window.addEventListener('DOMContentLoaded', fetchImages);
+    window.addEventListener('DOMContentLoaded', loadFullResImages);
   </script>
 </body>
 </html>
