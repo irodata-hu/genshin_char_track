@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multi-Source Genshin Character Gallery</title>
+  <title>Complete Genshin Character Gallery</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -75,12 +75,10 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      box-sizing: border-box;
-      /* Ensures card grows to full aspect ratio of image */
       max-width: 100%;
     }
 
-    /* Fixed: Preserves exact original dimensions and prevents clipping */
+    /* Prevents horizontal/vertical cropping while preserving aspect ratio */
     .img-card img {
       max-width: 100%;
       max-height: 80vh;
@@ -147,57 +145,75 @@
       return aliases[clean] || clean.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     }
 
-    async function loadMultiSourceImages() {
+    // Strips Wikia/CDN downscaling query parameters to return uncompressed artwork
+    function sanitizeUrl(url) {
+      if (!url || typeof url !== 'string') return null;
+      return url.replace(/\/revision\/latest\/scale-to-width-down\/\d+/, '/revision/latest');
+    }
+
+    async function fetchAllImages() {
       const rawInput = characterInput.value.trim() || 'furina';
       const slug = getSlug(rawInput);
 
       status.innerText = '';
       gallery.innerHTML = '';
 
-      let imageSources = [];
+      const imageQueue = [];
 
-      // API Source 1: genshin.jmp.blue
-      const jmpEndpoints = [
+      // API Source 1: genshin.jmp.blue (All available artwork + profile endpoints)
+      const jmpCandidates = [
         { url: `https://genshin.jmp.blue/characters/${slug}/gacha-splash`, source: 'genshin.jmp.blue (Gacha Splash)' },
         { url: `https://genshin.jmp.blue/characters/${slug}/gacha-card`, source: 'genshin.jmp.blue (Gacha Card)' },
         { url: `https://genshin.jmp.blue/characters/${slug}/portrait`, source: 'genshin.jmp.blue (Portrait)' },
-        { url: `https://genshin.jmp.blue/characters/${slug}/card`, source: 'genshin.jmp.blue (Card)' }
+        { url: `https://genshin.jmp.blue/characters/${slug}/card`, source: 'genshin.jmp.blue (Card)' },
+        { url: `https://genshin.jmp.blue/characters/${slug}/icon`, source: 'genshin.jmp.blue (Icon Profile)' },
+        { url: `https://genshin.jmp.blue/characters/${slug}/icon-big`, source: 'genshin.jmp.blue (Big Icon)' },
+        { url: `https://genshin.jmp.blue/characters/${slug}/icon-side`, source: 'genshin.jmp.blue (Side Icon)' }
       ];
-      imageSources.push(...jmpEndpoints);
+      imageQueue.push(...jmpCandidates);
 
-      // API Source 2: genshin-db Repository CDN
+      // API Source 2: genshin-db Repository CDN (Fandom & HoYoLab full-res mirrors)
       try {
         const res = await fetch(`https://fastly.jsdelivr.net/gh/theBowja/genshin-db@main/src/data/english/characters/${slug}.json`);
         if (res.ok) {
           const dbData = await res.json();
           const imgObj = dbData.images || {};
 
-          const dbUrls = [
+          const dbCandidates = [
             { raw: imgObj.cover1, name: 'genshin-db CDN (Cover Art 1)' },
             { raw: imgObj.cover2, name: 'genshin-db CDN (Cover Art 2)' },
-            { raw: imgObj.icon, name: 'genshin-db CDN (Icon)' },
-            { raw: imgObj['hoyolab-avatar'], name: 'genshin-db CDN (HoYoLab)' }
+            { raw: imgObj.icon, name: 'genshin-db CDN (Profile Icon)' },
+            { raw: imgObj.sideicon, name: 'genshin-db CDN (Side Icon)' },
+            { raw: imgObj['hoyolab-avatar'], name: 'genshin-db CDN (HoYoLab Avatar)' },
+            { raw: imgObj['hoyolab-avatar-icon'], name: 'genshin-db CDN (HoYoLab Icon)' },
+            { raw: imgObj['hoyolab-card'], name: 'genshin-db CDN (HoYoLab Card)' }
           ];
 
-          dbUrls.forEach(item => {
-            if (item.raw) {
-              const cleanUrl = item.raw.replace(/\/revision\/latest\/scale-to-width-down\/\d+/, '/revision/latest');
-              imageSources.push({ url: cleanUrl, source: item.name });
+          dbCandidates.forEach(item => {
+            const clean = sanitizeUrl(item.raw);
+            if (clean) {
+              imageQueue.push({ url: clean, source: item.name });
             }
           });
         }
-      } catch (err) {
-        console.warn('genshin-db fetch skipped:', err);
+      } catch (e) {
+        console.warn('genshin-db fetch skipped:', e);
       }
+
+      // Filter out duplicate URLs
+      const uniqueQueue = imageQueue.filter((item, index, self) =>
+        index === self.findIndex((t) => t.url === item.url)
+      );
 
       let loadedCount = 0;
 
-      imageSources.forEach(item => {
+      uniqueQueue.forEach(item => {
         const card = document.createElement('div');
         card.className = 'img-card';
 
         const img = document.createElement('img');
-        img.setAttribute('referrerpolicy', 'no-referrer');
+        // Crucial for loading HoYoLab / Fandom profile icons without referrer block
+        img.referrerPolicy = 'no-referrer';
         img.src = item.url;
         img.alt = rawInput;
 
@@ -221,12 +237,12 @@
       });
     }
 
-    searchBtn.addEventListener('click', loadMultiSourceImages);
+    searchBtn.addEventListener('click', fetchAllImages);
     characterInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') loadMultiSourceImages();
+      if (e.key === 'Enter') fetchAllImages();
     });
 
-    window.addEventListener('DOMContentLoaded', loadMultiSourceImages);
+    window.addEventListener('DOMContentLoaded', fetchAllImages);
   </script>
 </body>
 </html>
