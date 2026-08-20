@@ -48,13 +48,17 @@
       text-align: center;
       box-shadow: 0 4px 15px rgba(0,0,0,0.5);
       max-width: 350px;
-      display: none; /* Hidden until loaded */
+      display: none;
     }
 
     .card img {
       width: 100%;
+      height: 300px;
+      object-fit: cover;
+      object-position: top;
       border-radius: 8px;
       margin-bottom: 1rem;
+      background-color: #1a1a24;
     }
 
     .card h2 {
@@ -76,7 +80,7 @@
     }
   </style>
 
-  <!-- Load genshin-db directly from a CDN -->
+  <!-- Load genshin-db directly from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/genshin-db@latest/dist/genshin-db.js"></script>
 </head>
 <body>
@@ -105,10 +109,10 @@
       const input = document.getElementById('characterInput').value.trim();
       const card = document.getElementById('profileCard');
       const errorDiv = document.getElementById('error');
+      const charImage = document.getElementById('charImage');
 
       errorDiv.innerText = '';
 
-      // Query the global genshinDb object loaded from the CDN script
       const character = genshinDb.characters(input);
 
       if (!character) {
@@ -117,20 +121,26 @@
         return;
       }
 
-      // Populate card data
+      // Populate text data
       document.getElementById('charName').innerText = character.name;
       document.getElementById('charRarity').innerText = '★'.repeat(parseInt(character.rarity));
       document.getElementById('charElement').innerText = character.element;
       document.getElementById('charWeapon').innerText = character.weaponType;
       
-      // Pulling the official card image URL directly from the database output
-      document.getElementById('charImage').src = character.images.cover1 || character.images.icon;
+      // Pull splash art, with icon fallback
+      const imgUrl = character.images.cover1 || character.images.icon || character.images.sideicon;
+      
+      if (imgUrl) {
+        charImage.src = imgUrl;
+        charImage.style.display = 'block';
+      } else {
+        charImage.style.display = 'none';
+      }
 
-      // Show the card
       card.style.display = 'block';
     }
 
-    // Run automatically on load for default value
+    // Load initial character on start
     window.onload = getCharacterData;
   </script>
 
