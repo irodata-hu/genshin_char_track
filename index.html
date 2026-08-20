@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Genshin Character Images</title>
+  <title>Genshin Character High-Res Gallery</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -77,7 +77,7 @@
       align-items: center;
     }
 
-    /* Fixed Aspect Ratio: Fits full image without cropping */
+    /* Uncropped full resolution aspect ratio */
     .img-card img {
       max-width: 100%;
       max-height: 85vh;
@@ -100,58 +100,88 @@
 
   <div class="gallery" id="gallery"></div>
 
-  <script type="module">
-    import genshinDb from 'https://cdn.jsdelivr.net/npm/genshin-db@latest/+esm';
-
-    genshinDb.setDefaultOptions({ language: 'English', resultLanguage: 'English' });
-
+  <script>
     const searchBtn = document.getElementById('searchBtn');
     const characterInput = document.getElementById('characterInput');
     const gallery = document.getElementById('gallery');
     const status = document.getElementById('status');
 
-    function loadFullResImages() {
-      const query = characterInput.value.trim() || 'Furina';
+    let nameMap = {};
+
+    // Load character alias mapping on startup for 100% search accuracy
+    async function initNameMap() {
+      try {
+        const res = await fetch('https://fastly.jsdelivr.net/gh/theBowja/genshin-db@main/src/data/namemap/characters.json');
+        nameMap = await res.json();
+      } catch (e) {
+        console.warn('Could not pre-load name map, falling back to direct slug search.');
+      }
+    }
+
+    // Strips CDN downscaling query params to force original full resolution
+    function cleanHighResUrl(url) {
+      if (!url || typeof url !== 'string') return null;
+      return url.replace(/\/revision\/latest\/scale-to-width-down\/\d+/, '/revision/latest');
+    }
+
+    async function loadFullResImages() {
+      const rawInput = characterInput.value.trim();
+      if (!rawInput) return;
+
+      const sanitizedKey = rawInput.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const targetFile = nameMap[sanitizedKey] || sanitizedKey;
+
       status.innerText = '';
       gallery.innerHTML = '';
 
-      const character = genshinDb.characters(query);
+      try {
+        const res = await fetch(`https://fastly.jsdelivr.net/gh/theBowja/genshin-db@main/src/data/english/characters/${targetFile}.json`);
+        
+        if (!res.ok) {
+          status.innerText = `Character "${rawInput}" not found. Check spelling.`;
+          return;
+        }
 
-      if (!character) {
-        status.innerText = `Character "${query}" not found. Check spelling.`;
-        return;
+        const data = await res.json();
+        const imgObj = data.images || {};
+
+        // Extract and sanitize image URLs
+        const rawUrls = [
+          imgObj.cover1,
+          imgObj.cover2,
+          imgObj.icon,
+          imgObj.sideicon,
+          imgObj['hoyolab-avatar']
+        ];
+
+        const cleanUrls = rawUrls
+          .map(cleanHighResUrl)
+          .filter((url, idx, self) => url && self.indexOf(url) === idx);
+
+        if (cleanUrls.length === 0) {
+          status.innerText = 'No images available for this character.';
+          return;
+        }
+
+        cleanUrls.forEach(url => {
+          const card = document.createElement('div');
+          card.className = 'img-card';
+
+          const img = document.createElement('img');
+          // Bypass GitHub Pages CDN hotlink blocks
+          img.setAttribute('referrerpolicy', 'no-referrer');
+          img.src = url;
+          img.alt = data.name || 'Genshin Image';
+
+          img.onload = () => {
+            card.appendChild(img);
+            gallery.appendChild(card);
+          };
+        });
+
+      } catch (err) {
+        status.innerText = `Error loading images. Check your network or try another character.`;
       }
-
-      const imageObj = character.images || {};
-      
-      // Extract unique high-res URLs safely using string keys
-      const imageUrls = [
-        imageObj.cover1,
-        imageObj.cover2,
-        imageObj.icon,
-        imageObj.sideicon,
-        imageObj['hoyolab-avatar']
-      ].filter((url, index, self) => url && typeof url === 'string' && self.indexOf(url) === index);
-
-      if (imageUrls.length === 0) {
-        status.innerText = 'No images available for this character.';
-        return;
-      }
-
-      imageUrls.forEach(url => {
-        const card = document.createElement('div');
-        card.className = 'img-card';
-
-        const img = document.createElement('img');
-        img.setAttribute('referrerpolicy', 'no-referrer');
-        img.src = url;
-        img.alt = character.name;
-
-        img.onload = () => {
-          card.appendChild(img);
-          gallery.appendChild(card);
-        };
-      });
     }
 
     searchBtn.addEventListener('click', loadFullResImages);
@@ -159,7 +189,10 @@
       if (e.key === 'Enter') loadFullResImages();
     });
 
-    window.addEventListener('DOMContentLoaded', loadFullResImages);
+    window.addEventListener('DOMContentLoaded', async () => {
+      await initNameMap();
+      loadFullResImages();
+    });
   </script>
 </body>
 </html>
