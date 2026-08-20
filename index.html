@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Genshin Character Gallery with Links</title>
+  <title>Genshin Profile Icons & Debug Extractor</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       background-color: #0e0e12;
-      color: #ffffff;
+      color: #e0e0e0;
       margin: 0;
       padding: 2rem;
       display: flex;
@@ -18,10 +18,16 @@
       box-sizing: border-box;
     }
 
+    .container {
+      max-width: 1250px;
+      width: 100%;
+    }
+
     .search-box {
       display: flex;
       gap: 10px;
       margin-bottom: 2rem;
+      justify-content: center;
     }
 
     input, button {
@@ -50,39 +56,55 @@
       background-color: #3b5bdb;
     }
 
-    #status {
-      margin-bottom: 1rem;
-      color: #ff6b6b;
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 850px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .gallery-section, .debug-panel {
+      background-color: #161620;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .section-title {
+      color: #74c0fc;
       font-weight: bold;
+      margin-top: 0;
+      margin-bottom: 1rem;
     }
 
     .gallery {
       display: flex;
       flex-wrap: wrap;
-      gap: 24px;
+      gap: 16px;
       justify-content: center;
       align-items: flex-start;
-      width: 100%;
-      max-width: 1400px;
     }
 
     .img-card {
-      background-color: #161620;
+      background-color: #0e0e12;
       border: 1px solid #2a2a3a;
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      border-radius: 10px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      max-width: 100%;
       box-sizing: border-box;
+      max-width: 100%;
     }
 
-    /* Uncropped image display */
     .img-card img {
-      max-width: 100%;
-      max-height: 75vh;
+      max-width: 150px;
+      max-height: 150px;
       width: auto;
       height: auto;
       object-fit: contain;
@@ -91,7 +113,7 @@
     }
 
     .info-box {
-      margin-top: 12px;
+      margin-top: 10px;
       width: 100%;
       display: flex;
       flex-direction: column;
@@ -100,25 +122,24 @@
     }
 
     .source-label {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: #a0a0b0;
-      background-color: #0e0e12;
-      padding: 4px 10px;
-      border-radius: 6px;
+      background-color: #161620;
+      padding: 3px 8px;
+      border-radius: 4px;
       border: 1px solid #2a2a3a;
       text-align: center;
-      word-break: break-word;
     }
 
     .api-link {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: #74c0fc;
       text-decoration: none;
-      background-color: #0e0e12;
-      padding: 6px 10px;
-      border-radius: 6px;
+      background-color: #161620;
+      padding: 4px 8px;
+      border-radius: 4px;
       border: 1px solid #2a2a3a;
-      max-width: 90%;
+      max-width: 180px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -126,114 +147,151 @@
     }
 
     .api-link:hover {
-      text-decoration: underline;
       color: #a5d8ff;
       border-color: #4c6ef5;
+    }
+
+    /* Debug Panel Styles */
+    .debug-panel {
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+
+    .debug-title {
+      color: #ffd43b;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-box {
+      padding: 0.6rem;
+      border-radius: 6px;
+      background: #0e0e12;
+      margin-bottom: 1rem;
+      color: #74c0fc;
+      word-break: break-all;
+    }
+
+    .extraction-steps {
+      color: #b197fc;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    pre {
+      background-color: #0e0e12;
+      padding: 0.8rem;
+      border-radius: 6px;
+      max-height: 350px;
+      overflow-y: auto;
+      color: #a6e22e;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border: 1px solid #2a2a3a;
     }
   </style>
 </head>
 <body>
 
-  <div class="search-box">
-    <input type="text" id="characterInput" placeholder="e.g. furina, raiden, hutao" value="furina">
-    <button id="searchBtn">Search</button>
+  <div class="container">
+    <h1 style="text-align: center; margin-bottom: 1.5rem;">Genshin Icons & Debug Extractor</h1>
+
+    <div class="search-box">
+      <input type="text" id="characterInput" placeholder="Enter character (e.g. Furina, Raiden)" value="Furina">
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div class="main-layout">
+      <!-- Image Gallery (Profile & Side Icons Only) -->
+      <div class="gallery-section">
+        <div class="section-title">🖼️ Profile & Side Icons Gallery</div>
+        <div class="gallery" id="gallery">
+          <div style="color: #888;">Icons will appear here...</div>
+        </div>
+      </div>
+
+      <!-- Debug Panel -->
+      <div class="debug-panel">
+        <div class="debug-title">🔍 API Request Status</div>
+        <div class="status-box" id="statusBox">Ready to fetch...</div>
+
+        <div class="debug-title">⚙️ Dynamic Extraction Steps</div>
+        <div class="extraction-steps" id="extractionSteps">Waiting for query...</div>
+
+        <div class="debug-title">📦 Raw JSON Data</div>
+        <pre id="jsonOutput">// Dynamic response data will appear here</pre>
+      </div>
+    </div>
   </div>
 
-  <div id="status"></div>
-  <div class="gallery" id="gallery"></div>
+  <script type="module">
+    import genshinDb from 'https://cdn.jsdelivr.net/npm/genshin-db@latest/+esm';
 
-  <script>
+    genshinDb.setDefaultOptions({ language: 'English', resultLanguage: 'English' });
+
     const searchBtn = document.getElementById('searchBtn');
     const characterInput = document.getElementById('characterInput');
     const gallery = document.getElementById('gallery');
-    const status = document.getElementById('status');
+    const statusBox = document.getElementById('statusBox');
+    const extractionSteps = document.getElementById('extractionSteps');
+    const jsonOutput = document.getElementById('jsonOutput');
 
-    function getSlug(input) {
-      const clean = input.toLowerCase().trim();
-      const aliases = {
-        'furina': 'furina',
-        'raiden': 'raiden',
-        'raiden shogun': 'raiden',
-        'hu tao': 'hu-tao',
-        'hutao': 'hu-tao',
-        'yae': 'yae-miko',
-        'yae miko': 'yae-miko',
-        'ayaka': 'ayaka',
-        'kamisato ayaka': 'ayaka',
-        'ayato': 'ayato',
-        'kamisato ayato': 'ayato',
-        'kazuha': 'kazuha',
-        'kaedehara kazuha': 'kazuha',
-        'yelan': 'yelan',
-        'zhongli': 'zhongli',
-        'nahida': 'nahida',
-        'neuvillette': 'neuvillette',
-        'alhaitham': 'alhaitham',
-        'navia': 'navia',
-        'arlecchino': 'arlecchino'
-      };
-      return aliases[clean] || clean.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    }
-
-    // Strips Wikia/CDN downscaling query parameters to return full resolution
-    function sanitizeUrl(url) {
+    function cleanUrl(url) {
       if (!url || typeof url !== 'string') return null;
       return url.replace(/\/revision\/latest\/scale-to-width-down\/\d+/, '/revision/latest');
     }
 
-    async function fetchAllImages() {
-      const rawInput = characterInput.value.trim() || 'furina';
-      const slug = getSlug(rawInput);
-
-      status.innerText = '';
+    async function loadIcons() {
+      const rawQuery = characterInput.value.trim() || 'Furina';
+      
+      statusBox.style.color = '#74c0fc';
+      statusBox.innerText = `[SEARCH] Resolving dynamic metadata for "${rawQuery}"...`;
       gallery.innerHTML = '';
 
+      // Dynamic name resolution (No hardcoded maps/aliases used)
+      const character = genshinDb.characters(rawQuery, { matchCategories: true });
+
+      if (!character) {
+        statusBox.style.color = '#ff6b6b';
+        statusBox.innerText = `❌ Character "${rawQuery}" not found dynamically. Check spelling.`;
+        extractionSteps.innerHTML = `<span style="color:#ff6b6b">Dynamic lookup failed for query: "${rawQuery}"</span>`;
+        jsonOutput.innerText = `{\n  "error": "Character not found"\n}`;
+        gallery.innerHTML = `<div style="color:#ff6b6b;">No icons loaded.</div>`;
+        return;
+      }
+
+      // Format dynamic slug for endpoint querying
+      const slug = character.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
       const imageQueue = [];
 
-      // API Source 1: genshin.jmp.blue
-      const jmpCandidates = [
-        { url: `https://genshin.jmp.blue/characters/${slug}/gacha-splash`, source: 'genshin.jmp.blue (Gacha Splash)' },
-        { url: `https://genshin.jmp.blue/characters/${slug}/gacha-card`, source: 'genshin.jmp.blue (Gacha Card)' },
-        { url: `https://genshin.jmp.blue/characters/${slug}/portrait`, source: 'genshin.jmp.blue (Portrait)' },
-        { url: `https://genshin.jmp.blue/characters/${slug}/card`, source: 'genshin.jmp.blue (Card)' },
-        { url: `https://genshin.jmp.blue/characters/${slug}/icon`, source: 'genshin.jmp.blue (Icon Profile)' },
-        { url: `https://genshin.jmp.blue/characters/${slug}/icon-big`, source: 'genshin.jmp.blue (Big Icon)' },
+      // 1. Dynamic endpoints from genshin.jmp.blue API (Profile Icons & Side Icons ONLY)
+      const jmpEndpoints = [
+        { url: `https://genshin.jmp.blue/characters/${slug}/icon`, source: 'genshin.jmp.blue (Profile Icon)' },
         { url: `https://genshin.jmp.blue/characters/${slug}/icon-side`, source: 'genshin.jmp.blue (Side Icon)' }
       ];
-      imageQueue.push(...jmpCandidates);
+      imageQueue.push(...jmpEndpoints);
 
-      // API Source 2: genshin-db Repository CDN
-      try {
-        const res = await fetch(`https://fastly.jsdelivr.net/gh/theBowja/genshin-db@main/src/data/english/characters/${slug}.json`);
-        if (res.ok) {
-          const dbData = await res.json();
-          const imgObj = dbData.images || {};
+      // 2. Dynamic CDN links from genshin-db dataset (Profile Icons & Side Icons ONLY)
+      const imgObj = character.images || {};
+      const dbEndpoints = [
+        { raw: imgObj.icon, source: 'genshin-db CDN (Profile Icon)' },
+        { raw: imgObj.sideicon, source: 'genshin-db CDN (Side Icon)' },
+        { raw: imgObj['hoyolab-avatar-icon'], source: 'genshin-db CDN (HoYoLab Icon)' }
+      ];
 
-          const dbCandidates = [
-            { raw: imgObj.cover1, name: 'genshin-db CDN (Cover Art 1)' },
-            { raw: imgObj.cover2, name: 'genshin-db CDN (Cover Art 2)' },
-            { raw: imgObj.icon, name: 'genshin-db CDN (Profile Icon)' },
-            { raw: imgObj.sideicon, name: 'genshin-db CDN (Side Icon)' },
-            { raw: imgObj['hoyolab-avatar'], name: 'genshin-db CDN (HoYoLab Avatar)' },
-            { raw: imgObj['hoyolab-avatar-icon'], name: 'genshin-db CDN (HoYoLab Icon)' },
-            { raw: imgObj['hoyolab-card'], name: 'genshin-db CDN (HoYoLab Card)' }
-          ];
-
-          dbCandidates.forEach(item => {
-            const clean = sanitizeUrl(item.raw);
-            if (clean) {
-              imageQueue.push({ url: clean, source: item.name });
-            }
-          });
+      dbEndpoints.forEach(item => {
+        const sanitized = cleanUrl(item.raw);
+        if (sanitized) {
+          imageQueue.push({ url: sanitized, source: item.source });
         }
-      } catch (e) {
-        console.warn('genshin-db fetch skipped:', e);
-      }
+      });
 
       // Deduplicate URLs
       const uniqueQueue = imageQueue.filter((item, index, self) =>
         index === self.findIndex((t) => t.url === item.url)
       );
+
+      jsonOutput.innerText = JSON.stringify(character, null, 2);
 
       let loadedCount = 0;
 
@@ -244,14 +302,14 @@
         const img = document.createElement('img');
         img.referrerPolicy = 'no-referrer';
         img.src = item.url;
-        img.alt = rawInput;
+        img.alt = character.name;
 
         const infoBox = document.createElement('div');
         infoBox.className = 'info-box';
 
         const sourceTag = document.createElement('div');
         sourceTag.className = 'source-label';
-        sourceTag.innerText = `Source: ${item.source}`;
+        sourceTag.innerText = item.source;
 
         const apiLink = document.createElement('a');
         apiLink.className = 'api-link';
@@ -269,23 +327,35 @@
           card.appendChild(infoBox);
           gallery.appendChild(card);
           loadedCount++;
+          updateDebugInfo(rawQuery, character, slug, uniqueQueue.length, loadedCount);
         };
 
         img.onerror = () => {
           card.remove();
-          if (gallery.children.length === 0 && loadedCount === 0) {
-            status.innerText = `No images found for "${rawInput}". Check spelling.`;
-          }
         };
       });
+
+      statusBox.style.color = '#51cf66';
+      statusBox.innerText = `✅ Resolved "${character.name}" dynamically (API Key: ${character.key})`;
+      updateDebugInfo(rawQuery, character, slug, uniqueQueue.length, loadedCount);
     }
 
-    searchBtn.addEventListener('click', fetchAllImages);
+    function updateDebugInfo(query, char, slug, tested, loaded) {
+      extractionSteps.innerHTML = `
+        1. <b>User Input:</b> "${query}"<br>
+        2. <b>Dynamic Match:</b> "${char.name}" (Key: <code>${char.key}</code>)<br>
+        3. <b>Derived API Slug:</b> <code>${slug}</code><br>
+        4. <b>Filtered Icon Targets:</b> ${tested} (Profile & Side Icons Only)<br>
+        5. <b>Successfully Rendered:</b> ${loaded}
+      `;
+    }
+
+    searchBtn.addEventListener('click', loadIcons);
     characterInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') fetchAllImages();
+      if (e.key === 'Enter') loadIcons();
     });
 
-    window.addEventListener('DOMContentLoaded', fetchAllImages);
+    window.addEventListener('DOMContentLoaded', loadIcons);
   </script>
 </body>
 </html>
