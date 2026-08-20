@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genshin Character Profile Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1a1a24;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .search-box {
+      margin-bottom: 2rem;
+    }
+
+    input, button {
+      padding: 0.8rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+    }
+
+    input {
+      width: 250px;
+    }
+
+    button {
+      background-color: #4c6ef5;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #3b5bdb;
+    }
+
+    .card {
+      background-color: #2b2b3a;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      max-width: 350px;
+      display: none; /* Hidden until loaded */
+    }
+
+    .card img {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .card h2 {
+      margin: 0.5rem 0;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      background-color: #3e3e55;
+      font-size: 0.9rem;
+      margin: 0.2rem;
+    }
+
+    #error {
+      color: #ff6b6b;
+      margin-top: 1rem;
+    }
+  </style>
+
+  <!-- Load genshin-db directly from a CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/genshin-db@latest/dist/genshin-db.js"></script>
+</head>
+<body>
+
+  <h1>Genshin Profile Finder</h1>
+
+  <div class="search-box">
+    <input type="text" id="characterInput" placeholder="Enter character name (e.g., Raiden, Furina)" value="Furina">
+    <button onclick="getCharacterData()">Search</button>
+  </div>
+
+  <div id="error"></div>
+
+  <div class="card" id="profileCard">
+    <img id="charImage" src="" alt="Character Image">
+    <h2 id="charName"></h2>
+    <div>
+      <span class="badge" id="charRarity"></span>
+      <span class="badge" id="charElement"></span>
+      <span class="badge" id="charWeapon"></span>
+    </div>
+  </div>
+
+  <script>
+    function getCharacterData() {
+      const input = document.getElementById('characterInput').value.trim();
+      const card = document.getElementById('profileCard');
+      const errorDiv = document.getElementById('error');
+
+      errorDiv.innerText = '';
+
+      // Query the global genshinDb object loaded from the CDN script
+      const character = genshinDb.characters(input);
+
+      if (!character) {
+        card.style.display = 'none';
+        errorDiv.innerText = 'Character not found! Check the spelling.';
+        return;
+      }
+
+      // Populate card data
+      document.getElementById('charName').innerText = character.name;
+      document.getElementById('charRarity').innerText = '★'.repeat(parseInt(character.rarity));
+      document.getElementById('charElement').innerText = character.element;
+      document.getElementById('charWeapon').innerText = character.weaponType;
+      
+      // Pulling the official card image URL directly from the database output
+      document.getElementById('charImage').src = character.images.cover1 || character.images.icon;
+
+      // Show the card
+      card.style.display = 'block';
+    }
+
+    // Run automatically on load for default value
+    window.onload = getCharacterData;
+  </script>
+
+</body>
+</html>
