@@ -2,71 +2,255 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Genshin Debugger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genshin Character Profile & Extraction Debugger</title>
   <style>
-    body { font-family: sans-serif; background: #1a1a24; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 2rem; }
-    .card { background: #2b2b3a; border-radius: 12px; padding: 1.5rem; text-align: center; max-width: 350px; display: none; margin-top: 20px; }
-    .card img { width: 100%; height: 300px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem; background: #000; }
-    #debug { color: #ffd43b; font-size: 0.8rem; margin-top: 10px; max-width: 400px; word-break: break-all; }
-  </style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121218;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-  <!-- Load library -->
-  <script src="https://cdn.jsdelivr.net/npm/genshin-db@latest/dist/index.js"></script>
+    .container {
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      justify-content: center;
+    }
+
+    input, button {
+      padding: 0.8rem 1rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+    }
+
+    input {
+      width: 250px;
+      background-color: #2a2a36;
+      color: #fff;
+    }
+
+    button {
+      background-color: #4c6ef5;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #3b5bdb;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background-color: #1e1e28;
+      border-radius: 10px;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      display: none;
+    }
+
+    .card img {
+      width: 100%;
+      height: 320px;
+      object-fit: cover;
+      object-position: top;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      background-color: #0d0d12;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      background-color: #333345;
+      font-size: 0.85rem;
+      margin: 0.2rem;
+    }
+
+    .debug-panel {
+      background-color: #181822;
+      border-radius: 10px;
+      padding: 1rem;
+      border: 1px solid #333345;
+      font-family: monospace;
+      font-size: 0.85rem;
+      overflow: hidden;
+    }
+
+    .debug-title {
+      color: #ffd43b;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .status-box {
+      padding: 0.5rem;
+      border-radius: 4px;
+      background: #282836;
+      margin-bottom: 1rem;
+      color: #74c0fc;
+      word-break: break-all;
+    }
+
+    pre {
+      background-color: #0d0d12;
+      padding: 0.8rem;
+      border-radius: 6px;
+      max-height: 250px;
+      overflow-y: auto;
+      color: #a6e22e;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .extraction-steps {
+      color: #b197fc;
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+  </style>
 </head>
 <body>
 
-  <h1>Genshin Profile Finder</h1>
-  <div>
-    <input type="text" id="characterInput" placeholder="e.g. Furina" value="Furina">
-    <button onclick="handleSearch()">Search</button>
+  <div class="container">
+    <h1 style="text-align: center; margin-bottom: 1rem;">Genshin Profile & Data Extractor</h1>
+
+    <div class="search-box">
+      <input type="text" id="characterInput" placeholder="Enter character name" value="Furina">
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div class="main-layout">
+      <!-- Profile UI Card -->
+      <div class="card" id="profileCard">
+        <img id="charImage" src="" alt="Character Image">
+        <h2 id="charName" style="margin: 0.5rem 0;"></h2>
+        <div>
+          <span class="badge" id="charRarity"></span>
+          <span class="badge" id="charElement"></span>
+          <span class="badge" id="charWeapon"></span>
+        </div>
+      </div>
+
+      <!-- Debug & Extraction Logic Panel -->
+      <div class="debug-panel">
+        <div class="debug-title">🔍 Module Status</div>
+        <div class="status-box" id="statusBox">Initializing module...</div>
+
+        <div class="debug-title">⚙️ Data Extraction Logic</div>
+        <div class="extraction-steps" id="extractionSteps">Waiting for query...</div>
+
+        <div class="debug-title">📦 Raw Object Output</div>
+        <pre id="jsonOutput">// Raw JSON will appear here</pre>
+      </div>
+    </div>
   </div>
-  
-  <div id="debug"></div>
 
-  <div class="card" id="profileCard">
-    <img id="charImage" src="" alt="Character">
-    <h2 id="charName"></h2>
-    <p id="charDetails"></p>
-  </div>
+  <script type="module">
+    // Direct ES Module import eliminates CDN object loading issues
+    import genshinDb from 'https://cdn.jsdelivr.net/npm/genshin-db@latest/+esm';
 
-  <script>
-    // Access the library globally
-    const db = window.genshinDb;
+    const statusBox = document.getElementById('statusBox');
+    const searchBtn = document.getElementById('searchBtn');
+    const extractionSteps = document.getElementById('extractionSteps');
+    const jsonOutput = document.getElementById('jsonOutput');
+    const card = document.getElementById('profileCard');
 
-    function handleSearch() {
-      const debug = document.getElementById('debug');
-      const input = document.getElementById('characterInput').value.trim();
-      const card = document.getElementById('profileCard');
-      
-      debug.innerText = "Searching for: " + input + "...";
+    // Confirm module load
+    statusBox.style.color = '#51cf66';
+    statusBox.innerText = '✅ genshin-db ES Module loaded successfully!';
+
+    // Set search parameters
+    genshinDb.setDefaultOptions({ language: 'English', resultLanguage: 'English' });
+
+    function searchCharacter() {
+      const input = document.getElementById('characterInput').value.trim() || 'Furina';
+      statusBox.style.color = '#74c0fc';
+      statusBox.innerText = `Searching for "${input}"...`;
 
       try {
-        // Perform search
-        const result = db.characters(input);
+        // Step 1: Query the local database object
+        const result = genshinDb.characters(input);
 
         if (!result) {
-          debug.innerText = "Result: null. Try a different name.";
+          statusBox.style.color = '#ff6b6b';
+          statusBox.innerText = `❌ Character "${input}" not found in database.`;
+          extractionSteps.innerText = 'Query returned null.';
+          jsonOutput.innerText = '// No data';
           card.style.display = 'none';
           return;
         }
 
-        console.log("Full Data Object:", result);
-        debug.innerText = "Success! Found: " + result.name;
+        // Step 2: Extraction logic with fallbacks
+        const imgPath = result.images?.cover1 || result.images?.icon || result.images?.sideicon;
+        
+        // Log key extraction steps directly to screen
+        extractionSteps.innerHTML = `
+          1. <b>Query Call:</b> genshinDb.characters("${input}")<br>
+          2. <b>Name Field:</b> result.name ➔ "${result.name}"<br>
+          3. <b>Rarity Field:</b> result.rarity ➔ ${result.rarity}<br>
+          4. <b>Element & Weapon:</b> result.element / result.weaponType ➔ ${result.element} / ${result.weaponType}<br>
+          5. <b>Image Fallback Logic:</b><br>
+          &nbsp;&nbsp;• result.images.cover1 = ${result.images?.cover1 ? `"${result.images.cover1}"` : 'undefined'}<br>
+          &nbsp;&nbsp;• result.images.icon = ${result.images?.icon ? `"${result.images.icon}"` : 'undefined'}<br>
+          &nbsp;&nbsp;➔ <b>Selected URL:</b> "${imgPath}"
+        `;
 
-        // UI Update
+        // Step 3: Render complete JSON object for inspection
+        jsonOutput.innerText = JSON.stringify(result, null, 2);
+
+        // Step 4: Map extracted values to UI components
         document.getElementById('charName').innerText = result.name;
-        document.getElementById('charDetails').innerText = `${result.rarity}★ ${result.element} ${result.weaponType}`;
-        
-        // Use the official HoYoLab image URL provided by the DB
-        const img = result.images.cover1 || result.images.icon;
-        document.getElementById('charImage').src = img;
-        
+        document.getElementById('charRarity').innerText = '★'.repeat(parseInt(result.rarity));
+        document.getElementById('charElement').innerText = result.element;
+        document.getElementById('charWeapon').innerText = result.weaponType;
+        document.getElementById('charImage').src = imgPath;
+
         card.style.display = 'block';
+        statusBox.style.color = '#51cf66';
+        statusBox.innerText = `✅ Extracted data for ${result.name}`;
+
       } catch (err) {
-        debug.innerText = "Error: " + err.message;
-        console.error(err);
+        statusBox.style.color = '#ff6b6b';
+        statusBox.innerText = `❌ Error: ${err.message}`;
+        jsonOutput.innerText = err.stack;
+        card.style.display = 'none';
       }
     }
+
+    // Event listeners
+    searchBtn.addEventListener('click', searchCharacter);
+    document.getElementById('characterInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchCharacter();
+    });
+
+    // Run initial search on load
+    searchCharacter();
   </script>
 </body>
 </html>
