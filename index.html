@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Complete Genshin Character Gallery</title>
+  <title>Genshin Character Gallery with Links</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -76,12 +76,13 @@
       flex-direction: column;
       align-items: center;
       max-width: 100%;
+      box-sizing: border-box;
     }
 
-    /* Prevents horizontal/vertical cropping while preserving aspect ratio */
+    /* Uncropped image display */
     .img-card img {
       max-width: 100%;
-      max-height: 80vh;
+      max-height: 75vh;
       width: auto;
       height: auto;
       object-fit: contain;
@@ -89,8 +90,16 @@
       display: block;
     }
 
+    .info-box {
+      margin-top: 12px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+
     .source-label {
-      margin-top: 10px;
       font-size: 0.8rem;
       color: #a0a0b0;
       background-color: #0e0e12;
@@ -99,6 +108,27 @@
       border: 1px solid #2a2a3a;
       text-align: center;
       word-break: break-word;
+    }
+
+    .api-link {
+      font-size: 0.75rem;
+      color: #74c0fc;
+      text-decoration: none;
+      background-color: #0e0e12;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #2a2a3a;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+    }
+
+    .api-link:hover {
+      text-decoration: underline;
+      color: #a5d8ff;
+      border-color: #4c6ef5;
     }
   </style>
 </head>
@@ -145,7 +175,7 @@
       return aliases[clean] || clean.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     }
 
-    // Strips Wikia/CDN downscaling query parameters to return uncompressed artwork
+    // Strips Wikia/CDN downscaling query parameters to return full resolution
     function sanitizeUrl(url) {
       if (!url || typeof url !== 'string') return null;
       return url.replace(/\/revision\/latest\/scale-to-width-down\/\d+/, '/revision/latest');
@@ -160,7 +190,7 @@
 
       const imageQueue = [];
 
-      // API Source 1: genshin.jmp.blue (All available artwork + profile endpoints)
+      // API Source 1: genshin.jmp.blue
       const jmpCandidates = [
         { url: `https://genshin.jmp.blue/characters/${slug}/gacha-splash`, source: 'genshin.jmp.blue (Gacha Splash)' },
         { url: `https://genshin.jmp.blue/characters/${slug}/gacha-card`, source: 'genshin.jmp.blue (Gacha Card)' },
@@ -172,7 +202,7 @@
       ];
       imageQueue.push(...jmpCandidates);
 
-      // API Source 2: genshin-db Repository CDN (Fandom & HoYoLab full-res mirrors)
+      // API Source 2: genshin-db Repository CDN
       try {
         const res = await fetch(`https://fastly.jsdelivr.net/gh/theBowja/genshin-db@main/src/data/english/characters/${slug}.json`);
         if (res.ok) {
@@ -200,7 +230,7 @@
         console.warn('genshin-db fetch skipped:', e);
       }
 
-      // Filter out duplicate URLs
+      // Deduplicate URLs
       const uniqueQueue = imageQueue.filter((item, index, self) =>
         index === self.findIndex((t) => t.url === item.url)
       );
@@ -212,18 +242,31 @@
         card.className = 'img-card';
 
         const img = document.createElement('img');
-        // Crucial for loading HoYoLab / Fandom profile icons without referrer block
         img.referrerPolicy = 'no-referrer';
         img.src = item.url;
         img.alt = rawInput;
+
+        const infoBox = document.createElement('div');
+        infoBox.className = 'info-box';
 
         const sourceTag = document.createElement('div');
         sourceTag.className = 'source-label';
         sourceTag.innerText = `Source: ${item.source}`;
 
+        const apiLink = document.createElement('a');
+        apiLink.className = 'api-link';
+        apiLink.href = item.url;
+        apiLink.target = '_blank';
+        apiLink.rel = 'noopener noreferrer';
+        apiLink.title = item.url;
+        apiLink.innerText = item.url;
+
+        infoBox.appendChild(sourceTag);
+        infoBox.appendChild(apiLink);
+
         img.onload = () => {
           card.appendChild(img);
-          card.appendChild(sourceTag);
+          card.appendChild(infoBox);
           gallery.appendChild(card);
           loadedCount++;
         };
