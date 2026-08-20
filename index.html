@@ -75,9 +75,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      box-sizing: border-box;
+      /* Ensures card grows to full aspect ratio of image */
+      max-width: 100%;
     }
 
-    /* Uncropped aspect ratio */
+    /* Fixed: Preserves exact original dimensions and prevents clipping */
     .img-card img {
       max-width: 100%;
       max-height: 80vh;
@@ -96,6 +99,8 @@
       padding: 4px 10px;
       border-radius: 6px;
       border: 1px solid #2a2a3a;
+      text-align: center;
+      word-break: break-word;
     }
   </style>
 </head>
@@ -115,7 +120,6 @@
     const gallery = document.getElementById('gallery');
     const status = document.getElementById('status');
 
-    // Handles common aliases and multi-word names
     function getSlug(input) {
       const clean = input.toLowerCase().trim();
       const aliases = {
@@ -161,7 +165,7 @@
       ];
       imageSources.push(...jmpEndpoints);
 
-      // API Source 2: genshin-db Repository (jsDelivr CDN)
+      // API Source 2: genshin-db Repository CDN
       try {
         const res = await fetch(`https://fastly.jsdelivr.net/gh/theBowja/genshin-db@main/src/data/english/characters/${slug}.json`);
         if (res.ok) {
@@ -177,7 +181,6 @@
 
           dbUrls.forEach(item => {
             if (item.raw) {
-              // Strip downscaling params to force original full resolution
               const cleanUrl = item.raw.replace(/\/revision\/latest\/scale-to-width-down\/\d+/, '/revision/latest');
               imageSources.push({ url: cleanUrl, source: item.name });
             }
@@ -210,7 +213,6 @@
         };
 
         img.onerror = () => {
-          // Remove invalid endpoints without leaving broken elements
           card.remove();
           if (gallery.children.length === 0 && loadedCount === 0) {
             status.innerText = `No images found for "${rawInput}". Check spelling.`;
